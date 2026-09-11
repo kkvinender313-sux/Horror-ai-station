@@ -1,0 +1,492 @@
+"""
+HORROR AI VIDEO GENERATOR
+Single-file controller
+
+Pipeline:
+Prompt
+  ↓
+Wan 2.2 / ComfyUI
+  ↓
+720p video
+  ↓
+FFmpeg
+  ↓
+1920x1080 @ 10 FPS
+  ↓
+final_horror_1080p.mp4
+
+Requirements:
+- Python 3.10+
+- ComfyUI
+- Wan 2.2 installed in ComfyUI
+- FFmpeg installed
+"""
+
+import json
+import time
+import uuid
+import subprocess
+import urllib.request
+import urllib.parse
+import os
+import sys
+
+
+# ============================================================
+# SETTINGS
+# ============================================================
+
+COMFY_URL = "http://127.0.0.1:8188"
+
+OUTPUT_DIR = "horror_output"
+
+TARGET_WIDTH = 1920
+TARGET_HEIGHT = 1080
+
+TARGET_FPS = 10
+
+# Generate a short clip first.
+# Multiple clips can later be joined together.
+GENERATED_FPS = 24
+
+
+# ============================================================
+# HORROR PROMPT ENHANCER
+# ============================================================
+
+def create_horror_prompt(user_prompt):
+
+    return f"""
+Cinematic psychological horror scene.
+
+{user_prompt}
+
+Visual style:
+photorealistic cinematic horror,
+dark atmospheric environment,
+moody volumetric lighting,
+deep shadows,
+realistic textures,
+subtle fog,
+cinematic composition,
+slow camera movement,
+dramatic depth of field,
+film grain,
+realistic nighttime lighting.
+
+Camera:
+slow dolly movement,
+subtle handheld motion,
+wide cinematic framing.
+
+Mood:
+ominous,
+mysterious,
+unsettling,
+suspenseful.
+
+Avoid:
+text,
+logos,
+watermarks,
+graphic gore.
+"""
+
+
+# ============================================================
+# SIMPLE WAN 2.2 COMFYUI WORKFLOW
+# ============================================================
+
+def create_workflow(prompt):
+
+    seed = int(time.time())
+
+    workflow = {
+
+        "6": {
+            "inputs": {
+                "text": prompt,
+                "clip": ["30", 0]
+            },
+            "class_type": "CLIPTextEncode"
+        },
+
+        "7": {
+            "inputs": {
+                "text": (
+                    "blurry, distorted, low quality, "
+                    "text, watermark, logo, oversaturated"
+                ),
+                "clip": ["30", 0]
+            },
+            "class_type": "CLIPTextEncode"
+        },
+
+        "30": {
+            "inputs": {
+                "ckpt_name": "wan2.2_ti2v_5B_fp16.safetensors"
+            },
+            "class_type": "CheckpointLoaderSimple"
+        },
+
+        "31": {
+            "inputs": {
+                "width": 1280,
+                "height": 720,
+                "length": 49,
+                "batch_size": 1
+            },
+            "class_type": "EmptyLatentVideo"
+        },
+
+        "32": {
+            "inputs": {
+                "seed": seed,
+                "steps": 20,
+                "cfg": 6.0,
+                "sampler_name": "euler",
+                "scheduler": "simple",
+                "positive": ["6", 0],
+                "negative": ["7", 0],
+                "latent": ["31", 0]
+            },
+            "class_type": "KSampler"
+        }
+
+    }
+
+    return workflow
+
+
+# ============================================================
+# SEND WORKFLOW TO COMFYUI
+# ============================================================
+
+def send_workflow(workflow):
+
+    client_id = str(uuid.uuid4())
+
+    payload = json.dumps({
+        "prompt": workflow,
+        "client_id": client_id
+    }).encode("utf-8")
+
+    request = urllib.request.Request(
+        COMFY_URL + "/prompt",
+        data=payload,
+        headers={
+            "Content-Type": "application/json"
+        }
+    )
+
+    with urllib.request.urlopen(request) as response:
+
+        result = json.loads(
+            response.read().decode("utf-8")
+        )
+
+    return result["prompt_id"]
+
+
+# ============================================================
+# WAIT FOR COMFYUI
+# ============================================================
+
+def wait_for_result(prompt_id):
+
+    print("\nGenerating video...")
+
+    while True:
+
+        try:
+
+            url = (
+                COMFY_URL +
+                "/history/" +
+                prompt_id
+            )
+
+            with urllib.request.urlopen(url) as response:
+
+                data = json.loads(
+                    response.read().decode("utf-8")
+                )
+
+            if prompt_id in data:
+
+                print("Generation complete.")
+
+                return data[prompt_id]
+
+        except Exception:
+            pass
+
+        time.sleep(2)
+
+
+# ============================================================
+# FIND OUTPUT VIDEO
+# ============================================================
+
+def find_video(history):
+
+    outputs = history.get(
+        "outputs",
+        {}
+    )
+
+    for node in outputs.values():
+
+        if "gifs" in node:
+
+            for item in node["gifs"]:
+
+                filename = item["filename"]
+
+                subfolder = item.get(
+                    "subfolder",
+                    ""
+                )
+
+                folder_type = item.get(
+                    "type",
+                    "output"
+                )
+
+                return download_video(
+                    filename,
+                    subfolder,
+                    folder_type
+                )
+
+        if "videos" in node:
+
+            for item in node["videos"]:
+
+                filename = item["filename"]
+
+                subfolder = item.get(
+                    "subfolder",
+                    ""
+                )
+
+                folder_type = item.get(
+                    "type",
+                    "output"
+                )
+
+                return download_video(
+                    filename,
+                    subfolder,
+                    folder_type
+                )
+
+    return None
+
+
+# ============================================================
+# DOWNLOAD COMFYUI OUTPUT
+# ============================================================
+
+def download_video(
+    filename,
+    subfolder,
+    folder_type
+):
+
+    params = urllib.parse.urlencode({
+
+        "filename": filename,
+
+        "subfolder": subfolder,
+
+        "type": folder_type
+
+    })
+
+    url = (
+        COMFY_URL +
+        "/view?" +
+        params
+    )
+
+    os.makedirs(
+        OUTPUT_DIR,
+        exist_ok=True
+    )
+
+    output = os.path.join(
+        OUTPUT_DIR,
+        "wan_generated.mp4"
+    )
+
+    print("Downloading generated video...")
+
+    urllib.request.urlretrieve(
+        url,
+        output
+    )
+
+    return output
+
+
+# ============================================================
+# FFMPEG 1080P + LOW FPS
+# ============================================================
+
+def convert_to_1080p(
+    input_file,
+    output_file
+):
+
+    print(
+        f"\nConverting to "
+        f"{TARGET_WIDTH}x{TARGET_HEIGHT} "
+        f"@ {TARGET_FPS} FPS..."
+    )
+
+    command = [
+
+        "ffmpeg",
+
+        "-y",
+
+        "-i",
+        input_file,
+
+        "-vf",
+
+        (
+            f"scale={TARGET_WIDTH}:{TARGET_HEIGHT}:"
+            "force_original_aspect_ratio=increase,"
+            f"crop={TARGET_WIDTH}:{TARGET_HEIGHT},"
+            f"fps={TARGET_FPS}"
+        ),
+
+        "-c:v",
+        "libx264",
+
+        "-preset",
+        "medium",
+
+        "-crf",
+        "20",
+
+        "-pix_fmt",
+        "yuv420p",
+
+        "-movflags",
+        "+faststart",
+
+        output_file
+    ]
+
+    subprocess.run(
+        command,
+        check=True
+    )
+
+    print(
+        "\nFINAL VIDEO CREATED:"
+    )
+
+    print(
+        os.path.abspath(output_file)
+    )
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+def main():
+
+    print("""
+========================================
+       NIGHTMARE AI VIDEO GENERATOR
+========================================
+""")
+
+    if len(sys.argv) > 1:
+
+        user_prompt = " ".join(
+            sys.argv[1:]
+        )
+
+    else:
+
+        user_prompt = input(
+            "Enter your horror idea: "
+        )
+
+
+    prompt = create_horror_prompt(
+        user_prompt
+    )
+
+
+    workflow = create_workflow(
+        prompt
+    )
+
+
+    print(
+        "\nConnecting to ComfyUI..."
+    )
+
+
+    try:
+
+        prompt_id = send_workflow(
+            workflow
+        )
+
+    except Exception as error:
+
+        print(
+            "\nCould not connect to ComfyUI."
+        )
+
+        print(
+            "Start ComfyUI first."
+        )
+
+        print(error)
+
+        return
+
+
+    history = wait_for_result(
+        prompt_id
+    )
+
+
+    video = find_video(
+        history
+    )
+
+
+    if not video:
+
+        print(
+            "\nCould not find generated video."
+        )
+
+        return
+
+
+    final_video = os.path.join(
+        OUTPUT_DIR,
+        "final_horror_1080p.mp4"
+    )
+
+
+    convert_to_1080p(
+        video,
+        final_video
+    )
+
+
+if __name__ == "__main__":
+
+    main()
