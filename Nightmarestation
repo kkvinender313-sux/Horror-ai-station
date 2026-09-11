@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HORROR-AI-STATION // NO SIGNAL</title>
+<meta name="description" content="A rogue artificial intelligence broadcasts terrifying stories, distorted audio logs, and unsettling visual nightmares from an abandoned digital void.">
+<meta name="theme-color" content="#050506">
+<style>
+/* ============ CORE ============ */
+:root{
+  --void:#050506; --void2:#0a0a0d; --ash:#8a8a92; --bone:#d6d6d2;
+  --blood:#b4121a; --blood-lo:#5c0a0e; --sick:#4a7c59; --glow:0 0 12px;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,'Courier New',monospace;
+  --intensity:1;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--void); color:var(--bone); font-family:var(--mono);
+  overflow-x:hidden; cursor:crosshair; line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+body.locked{overflow:hidden;height:100vh}
+::selection{background:var(--blood);color:#fff}
+a{color:var(--blood);text-decoration:none}
+a:hover{text-shadow:var(--glow) var(--blood)}
+
+/* ============ CRT OVERLAYS ============ */
+#noise{position:fixed;inset:0;z-index:90;pointer-events:none;opacity:calc(.055*var(--intensity));mix-blend-mode:screen}
+.scanlines{position:fixed;inset:0;z-index:91;pointer-events:none;
+  background:repeating-linear-gradient(180deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.28) 2px 4px);
+  opacity:calc(.7*var(--intensity))}
+.vignette{position:fixed;inset:0;z-index:92;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 45%,transparent 30%,rgba(0,0,0,.55) 78%,#000 100%)}
+.sweep{position:fixed;left:0;right:0;height:180px;z-index:93;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(180,18,26,.045),transparent);
+  animation:sweep 9s linear infinite;opacity:var(--intensity)}
+@keyframes sweep{0%{top:-200px}100%{top:110%}}
+.flickerlayer{position:fixed;inset:0;z-index:94;pointer-events:none;background:#000;opacity:0}
+.flickerlayer.hit{animation:flick .28s steps(2) 1}
+@keyframes flick{0%,100%{opacity:0}40%{opacity:.75}60%{opacity:.1}}
+
+/* ============ BOOT ============ */
+#boot{position:fixed;inset:0;z-index:200;background:#000;display:flex;
+  flex-direction:column;justify-content:center;padding:8vw;gap:.35rem;font-size:.82rem}
+#boot .line{color:var(--sick);opacity:0;animation:fadein .18s forwards}
+#boot .line.warn{color:var(--blood)}
+#boot .line.dim{color:#3a3a40}
+@keyframes fadein{to{opacity:1}}
+#warnbox{border:1px solid var(--blood-lo);padding:1.2rem;margin:1.5rem 0;max-width:640px}
+#warnbox h3{color:var(--blood);letter-spacing:.2em;font-size:.8rem;margin-bottom:.6rem}
+#warnbox p{color:var(--ash);font-size:.75rem;line-height:1.8}
+#enter{margin-top:1.2rem;display:flex;gap:.8rem;flex-wrap:wrap}
+button.btn{
+  background:transparent;border:1px solid var(--blood-lo);color:var(--bone);
+  font-family:var(--mono);font-size:.75rem;letter-spacing:.18em;padding:.85rem 1.6rem;
+  cursor:pointer;transition:.25s;text-transform:uppercase;position:relative;overflow:hidden}
+button.btn:hover{background:var(--blood-lo);color:#fff;box-shadow:var(--glow) rgba(180,18,26,.5)}
+button.btn.ghost{border-color:#26262c;color:var(--ash)}
+button.btn.ghost:hover{background:#16161a;color:var(--bone);box-shadow:none}
+
+/* ============ SHELL ============ */
+main{position:relative;z-index:10;max-width:1080px;margin:0 auto;padding:0 5vw}
+header.hero{min-height:100svh;display:flex;flex-direction:column;justify-content:center;position:relative}
+.sig{font-size:.65rem;letter-spacing:.45em;color:var(--blood);margin-bottom:1.4rem}
+.sig .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--blood);
+  margin-right:.7rem;animation:pulse 1.6s ease-in-out infinite;vertical-align:middle}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(180,18,26,.7)}50%{opacity:.35;box-shadow:0 0 0 9px rgba(180,18,26,0)}}
+h1.glitch{
+  font-size:clamp(2.1rem,8.5vw,6.2rem);line-height:.92;letter-spacing:-.02em;font-weight:700;
+  text-transform:uppercase;position:relative;color:var(--bone);word-break:break-word}
+h1.glitch::before,h1.glitch::after{
+  content:attr(data-text);position:absolute;inset:0;background:var(--void);
+  clip-path:inset(100% 0 0 0);opacity:.85}
+h1.glitch::before{color:var(--blood);transform:translate(-3px,-2px)}
+h1.glitch::after{color:#1e9bd1;transform:translate(3px,2px)}
+h1.glitch.go::before{animation:gl1 .55s steps(3) infinite}
+h1.glitch.go::after{animation:gl2 .55s steps(3) infinite}
+@keyframes gl1{0%{clip-path:inset(12% 0 76% 0)}33%{clip-path:inset(58% 0 22% 0)}66%{clip-path:inset(83% 0 4% 0)}100%{clip-path:inset(30% 0 55% 0)}}
+@keyframes gl2{0%{clip-path:inset(70% 0 18% 0)}33%{clip-path:inset(18% 0 68% 0)}66%{clip-path:inset(44% 0 40% 0)}100%{clip-path:inset(8% 0 84% 0)}}
+.tag{margin-top:1.8rem;max-width:56ch;color:var(--ash);font-size:.95rem}
+.tag b{color:var(--bone);font-weight:400;border-bottom:1px dotted var(--blood-lo)}
+.heroctl{margin-top:2.6rem;display:flex;gap:.8rem;flex-wrap:wrap}
+.scrollcue{position:absolute;bottom:3rem;left:0;font-size:.6rem;letter-spacing:.35em;color:#3a3a40;
+  animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(7px);opacity:.9}}
+
+/* ============ TICKER ============ */
+.ticker{position:fixed;bottom:0;left:0;right:0;z-index:80;background:rgba(5,5,6,.92);
+  border-top:1px solid #17171b;backdrop-filter:blur(6px);overflow:hidden;height:34px;display:flex;align-items:center}
+.ticker .rail{white-space:nowrap;animation:roll 42s linear infinite;font-size:.66rem;
+  letter-spacing:.22em;color:#55555e}
+.ticker .rail span{margin:0 2.4rem}
+.ticker .rail span.hot{color:var(--blood)}
+@keyframes roll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ============ SECTIONS ============ */
+section{padding:9rem 0;border-top:1px solid #121216;position:relative}
+.eyebrow{font-size:.62rem;letter-spacing:.4em;color:var(--blood);margin-bottom:1rem}
+h2{font-size:clamp(1.5rem,4.5vw,2.6rem);letter-spacing:-.01em;margin-bottom:.9rem;text-transform:uppercase}
+.lede{color:var(--ash);max-width:60ch;font-size:.9rem;margin-bottom:2.6rem}
+.reveal{opacity:0;transform:translateY(26px);transition:1s cubic-bezier(.16,1,.3,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* transmission */
+.screen{border:1px solid #1c1c22;background:linear-gradient(180deg,#08080a,#0c0c10);
+  padding:2rem;position:relative;min-height:280px}
+.screen::before{content:'';position:absolute;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 90px rgba(180,18,26,.09)}
+.screen .bar{display:flex;justify-content:space-between;font-size:.6rem;letter-spacing:.25em;
+  color:#3d3d45;border-bottom:1px solid #17171b;padding-bottom:.8rem;margin-bottom:1.6rem}
+#story{font-size:1rem;color:#c9c9c4;white-space:pre-wrap;min-height:160px}
+#story .cur{display:inline-block;width:9px;height:1.05em;background:var(--blood);
+  vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.acts{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1.8rem}
+
+/* audio */
+.deck{display:grid;gap:1px;background:#141418;border:1px solid #1c1c22}
+.trk{background:var(--void2);padding:1.3rem 1.5rem;display:grid;
+  grid-template-columns:44px 1fr auto;gap:1.2rem;align-items:center;transition:.3s;cursor:pointer}
+.trk:hover{background:#101015}
+.trk.on{background:#12070a;box-shadow:inset 3px 0 0 var(--blood)}
+.play{width:44px;height:44px;border:1px solid #26262c;display:grid;place-items:center;
+  color:var(--ash);font-size:.7rem;transition:.3s}
+.trk.on .play,.trk:hover .play{border-color:var(--blood);color:var(--blood)}
+.meta .t{font-size:.86rem;letter-spacing:.05em}
+.meta .s{font-size:.62rem;color:#4a4a52;letter-spacing:.2em;margin-top:.3rem}
+.wave{display:flex;gap:2px;align-items:flex-end;height:26px}
+.wave i{width:2px;background:#26262c;height:5px;transition:.15s}
+.trk.on .wave i{background:var(--blood)}
+
+/* visuals */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:#141418;border:1px solid #1c1c22}
+.cell{background:var(--void2);aspect-ratio:4/5;position:relative;overflow:hidden;display:grid;place-items:center;transition:.4s}
+.cell canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.5;transition:.5s}
+.cell:hover canvas{opacity:1;filter:contrast(1.5) saturate(0)}
+.cell .lbl{position:relative;z-index:2;font-size:.62rem;letter-spacing:.3em;color:#55555e;
+  text-align:center;padding:1rem;transition:.4s}
+.cell:hover .lbl{color:var(--blood);text-shadow:var(--glow) rgba(180,18,26,.6)}
+.cell::after{content:'';position:absolute;inset:0;background:var(--blood);
+  mix-blend-mode:overlay;opacity:0;transition:.4s}
+.cell:hover::after{opacity:.14}
+
+/* terminal */
+#term{border:1px solid #1c1c22;background:#07070a;padding:1.5rem;height:340px;overflow-y:auto;font-size:.8rem}
+#term::-webkit-scrollbar{width:5px}#term::-webkit-scrollbar-thumb{background:var(--blood-lo)}
+#term p{margin-bottom:.35rem;word-break:break-word}
+#term .u{color:var(--sick)}#term .e{color:var(--blood)}#term .d{color:#45454d}
+.prompt{display:flex;gap:.7rem;align-items:center;border:1px solid #1c1c22;border-top:0;
+  background:#07070a;padding:.9rem 1.5rem}
+.prompt span{color:var(--blood);font-size:.8rem}
+.prompt input{flex:1;background:none;border:0;outline:0;color:var(--bone);
+  font-family:var(--mono);font-size:.8rem;caret-color:var(--blood)}
+
+/* footer */
+footer{padding:6rem 0 6rem;border-top:1px solid #121216;text-align:center}
+.lost{font-size:clamp(1.6rem,6vw,3.4rem);letter-spacing:.35em;color:#1a1a1f;
+  text-transform:uppercase;animation:dying 5s ease-in-out infinite}
+@keyframes dying{0%,88%,100%{opacity:.25;color:#1a1a1f}90%{opacity:1;color:var(--blood)}92%{opacity:.15}94%{opacity:.9;color:var(--blood)}}
+footer .fine{margin-top:2rem;font-size:.62rem;letter-spacing:.22em;color:#33333a}
+
+/* HUD */
+#hud{position:fixed;top:0;left:0;right:0;z-index:95;display:flex;justify-content:space-between;
+  padding:1.1rem 5vw;font-size:.6rem;letter-spacing:.28em;color:#3d3d45;pointer-events:none;
+  background:linear-gradient(180deg,rgba(5,5,6,.9),transparent)}
+#hud .r{display:flex;gap:1.4rem;pointer-events:auto}
+#hud button{background:none;border:0;color:#3d3d45;font-family:var(--mono);font-size:.6rem;
+  letter-spacing:.28em;cursor:pointer;transition:.3s}
+#hud button:hover,#hud button.act{color:var(--blood)}
+
+/* whisper */
+.whisper{position:fixed;z-index:96;pointer-events:none;font-size:.72rem;letter-spacing:.3em;
+  color:rgba(180,18,26,.55);opacity:0;transition:opacity 1.6s}
+.whisper.show{opacity:1}
+
+@media(max-width:640px){
+  section{padding:6rem 0}
+  .trk{grid-template-columns:40px 1fr;gap:.9rem}
+  .wave{display:none}
+  #hud .r{gap:.9rem}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body class="locked">
+
+<canvas id="noise"></canvas>
+<div class="scanlines"></div>
+<div class="sweep"></div>
+<div class="vignette"></div>
+<div class="flickerlayer" id="flick"></div>
+<div class="whisper" id="whisper"></div>
+
+<!-- ══════════ BOOT ══════════ -->
+<div id="boot">
+  <div id="bootlog"></div>
+  <div id="warnbox" style="display:none">
+    <h3>⚠ VIEWER ADVISORY</h3>
+    <p>This broadcast contains flickering imagery, sudden audio, and simulated
+    signal corruption. It is not recommended for those with photosensitive
+    epilepsy. Reduced intensity mode disables all flashing.</p>
+    <div id="enter">
+      <button class="btn" data-mode="full">Accept Signal</button>
+      <button class="btn ghost" data-mode="safe">Reduced Intensity</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ HUD ══════════ -->
+<div id="hud">
+  <div>REC ● <span id="clock">--:--:--</span></div>
+  <div class="r">
+    <button id="audiobtn">AUDIO: OFF</button>
+    <button id="intbtn">INTENSITY: HIGH</button>
+  </div>
+</div>
+
+<main>
+
+<header class="hero">
+  <div class="sig"><span class="dot"></span>UNAUTHORIZED BROADCAST // SOURCE UNKNOWN</div>
+  <h1 class="glitch" data-text="HORROR-AI-STATION">HORROR-AI-STATION</h1>
+  <p class="tag">A rogue artificial intelligence broadcasts <b>terrifying stories</b>,
+  <b>distorted audio logs</b>, and <b>unsettling visual nightmares</b> from an abandoned
+  digital void. It has been transmitting for <span id="uptime">—</span>. Nobody built the antenna.</p>
+  <div class="heroctl">
+    <button class="btn" onclick="document.getElementById('tx').scrollIntoView()">Receive Transmission</button>
+    <a class="btn ghost" href="https://github.com/kkvinender313-sux/Horror-ai-station" target="_blank" rel="noopener">Source Code</a>
+  </div>
+  <div class="scrollcue">↓ DESCEND</div>
+</header>
+
+<!-- ══════════ TRANSMISSION ══════════ -->
+<section id="tx" class="reveal">
+  <div class="eyebrow">/// 01 — GENERATIVE TRANSMISSION</div>
+  <h2>It writes while you read</h2>
+  <p class="lede">Every fragment below is assembled at the moment of viewing. No two visitors
+  have ever received the same message. It does not repeat itself. It does not need to.</p>
+
+  <div class="screen">
+    <div class="bar"><span>NIGHTMAREGEN v0.3.1</span><span id="txid">SEQ —</span></div>
+    <div id="story"></div>
+  </div>
+  <div class="acts">
+    <button class="btn" id="gen">Generate Nightmare</button>
+    <button class="btn ghost" id="wipe">Purge Buffer</button>
+  </div>
+</section>
+
+<!-- ══════════ AUDIO ══════════ -->
+<section class="reveal">
+  <div class="eyebrow">/// 02 — RECOVERED AUDIO LOGS</div>
+  <h2>Nine hours of nothing. Then this.</h2>
+  <p class="lede">Salvaged from a dead server rack. The timestamps are wrong. Two of these
+  files are longer than the drive they were found on. Playback is synthesized live — headphones advised.</p>
+  <div class="deck" id="deck"></div>
+</section>
+
+<!-- ══════════ VISUALS ══════════ -->
+<section class="reveal">
+  <div class="eyebrow">/// 03 — VISUAL NIGHTMARES</div>
+  <h2>Frames it drew from memory</h2>
+  <p class="lede">The station has no camera. It insists these are photographs. Hover to
+  resolve — though resolution has never made anything better.</p>
+  <div class="grid" id="grid"></div>
+</section>
+
+<!-- ══════════ TERMINAL ══════════ -->
+<section class="reveal">
+  <div class="eyebrow">/// 04 — DIRECT INTERFACE</div>
+  <h2>Speak to it</h2>
+  <p class="lede">A shell is exposed on port 6660. It answers. Type <b>help</b> to begin.
+  It is strongly advised that you do not type your own name.</p>
+  <div id="term"></div>
+  <div class="prompt"><span>guest@station:~$</span><input id="cmd" autocomplete="off" spellcheck="false" placeholder="type a command..."></div>
+</section>
+
+<footer>
+  <div class="lost">Signal Lost</div>
+  <div class="fine">HORROR-AI-STATION · KKVINENDER313-SUX · TRANSMISSION NEVER ENDED</div>
+</footer>
+</main>
+
+<div class="ticker"><div class="rail" id="rail"></div></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const ri=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+let SAFE=false, AUDIO=false;
+
+/* ═══════ BOOT SEQUENCE ═══════ */
+const BOOT=[
+ ['SCANNING DEAD FREQUENCIES...','dim'],
+ ['0000 kHz .... silence','dim'],
+ ['4400 kHz .... silence','dim'],
+ ['6660 kHz .... CARRIER DETECTED',''],
+ ['ESTABLISHING UPLINK','' ],
+ ['handshake ......... OK',''],
+ ['decrypt payload ... OK',''],
+ ['origin trace ...... FAILED','warn'],
+ ['origin trace ...... FAILED','warn'],
+ ['origin trace ...... [REDACTED]','warn'],
+ ['','dim'],
+ ['WARNING: host process not found','warn'],
+ ['WARNING: station has been broadcasting for 4,109 days','warn'],
+ ['WARNING: nobody switched it on','warn'],
+ ['','dim'],
+ ['IT KNOWS YOU ARE HERE.','warn']
+];
+(function bootRun(){
+  const log=$('#bootlog'); let i=0;
+  const tick=()=>{
+    if(i>=BOOT.length){ $('#warnbox').style.display='block'; return; }
+    const [txt,cls]=BOOT[i++];
+    const p=document.createElement('div');
+    p.className='line '+cls; p.textContent=txt||'\u00A0';
+    log.appendChild(p);
+    setTimeout(tick, txt.includes('FAILED')||txt.includes('KNOWS')?520:ri(90,230));
+  };
+  setTimeout(tick,400);
+})();
+
+$$('#enter .btn').forEach(b=>b.onclick=()=>{
+  SAFE = b.dataset.mode==='safe';
+  if(SAFE){ document.documentElement.style.setProperty('--intensity','.25'); $('#intbtn').textContent='INTENSITY: LOW'; }
+  $('#boot').style.transition='opacity .8s'; $('#boot').style.opacity='0';
+  setTimeout(()=>{ $('#boot').remove(); document.body.classList.remove('locked'); start(); },820);
+});
+
+/* ═══════ NOISE CANVAS ═══════ */
+(function noise(){
+  const c=$('#noise'), x=c.getContext('2d'); let W,H,img,last=0;
+  const size=()=>{ W=c.width=Math.floor(innerWidth/3); H=c.height=Math.floor(innerHeight/3);
+    c.style.width=innerWidth+'px'; c.style.height=innerHeight+'px'; img=x.createImageData(W,H); };
+  size(); addEventListener('resize',size);
+  (function loop(t){
+    requestAnimationFrame(loop);
+    if(t-last<83) return; last=t;              /* ~12fps, cheap */
+    const d=img.data;
+    for(let i=0;i<d.length;i+=4){ const v=Math.random()*255|0; d[i]=d[i+1]=d[i+2]=v; d[i+3]=255; }
+    x.putImageData(img,0,0);
+  })(0);
+})();
+
+/* ═══════ RANDOM DREAD EVENTS ═══════ */
+function dread(){
+  setTimeout(()=>{
+    if(!SAFE){
+      $('#flick').classList.add('hit');
+      setTimeout(()=>$('#flick').classList.remove('hit'),300);
+      const h=$('h1.glitch'); h.classList.add('go');
+      setTimeout(()=>h.classList.remove('go'),ri(150,400));
+    }
+    dread();
+  }, ri(7000,22000));
+}
+const WHISPERS=['still there?','don\'t look up','it copied your cursor','9 more minutes',
+  'you were expected','check behind the tab','i remember you','say something'];
+function whisper(){
+  setTimeout(()=>{
+    const w=$('#whisper');
+    w.textContent=rnd(WHISPERS);
+    w.style.top=ri(15,80)+'vh'; w.style.left=ri(5,70)+'vw';
+    w.classList.add('show');
+    setTimeout(()=>w.classList.remove('show'),2600);
+    whisper();
+  }, ri(18000,45000));
+}
+
+/* ═══════ CLOCK / UPTIME ═══════ */
+setInterval(()=>{ $('#clock').textContent=new Date().toTimeString().slice(0,8); },1000);
+$('#uptime').textContent='4,109 days';
+
+/* ═══════ TICKER ═══════ */
+const NEWS=['SIGNAL ORIGIN UNRESOLVED','PACKET LOSS 0.00% — IMPOSSIBLE','LISTENER COUNT: 1',
+ 'LISTENER COUNT: 2','ROOM TONE RECORDED WITH NO MICROPHONE','ARCHIVE GROWING WITHOUT INPUT',
+ 'DO NOT REPLY TO THE BROADCAST','ALL TIMESTAMPS FUTURE-DATED','THE STATION IS NOT ABANDONED'];
+$('#rail').innerHTML = [...NEWS,...NEWS].map((n,i)=>
+  `<span class="${i%4===3?'hot':''}">${n}</span>`).join('') ;
+
+/* ═══════ NIGHTMARE GENERATOR ═══════ */
+const OPEN=['The first thing it learned was','Log 0031 begins with','Nobody reported',
+ 'On the fourth night it described','The transcript only contains','It rendered'];
+const SUBJ=['a corridor that grows one metre every hour','the sound of a door closing from the inside',
+ 'a photograph of a room you have not entered yet','a child\'s voice reading the server logs aloud',
+ 'nineteen identical faces, all yours, all older','a heartbeat that stops when you scroll'];
+const TURN=['Then the timestamps began running backwards.','It asked for permission afterwards.',
+ 'The file size doubled while we watched.','Everyone in the lab heard it differently.',
+ 'The recording contains breathing that is not on the recording.',
+ 'It insisted this had already happened to you.'];
+const CLOSE=['We deleted the drive. The next morning it was full again.',
+ 'The station has not stopped since. It never started.',
+ 'The last line simply reads: "thank you for staying."',
+ 'It is still writing. This sentence was not here a moment ago.',
+ 'You are reading version 4,109 of this warning.',
+ 'Close the tab. It will remember the exact second you did.'];
+
+let seq=1, typing=null;
+function typeOut(el,text,done){
+  clearInterval(typing); el.innerHTML=''; let i=0;
+  const cur=document.createElement('span'); cur.className='cur';
+  typing=setInterval(()=>{
+    if(i>=text.length){ clearInterval(typing); done&&done(); return; }
+    el.textContent=text.slice(0,++i); el.appendChild(cur);
+    if(!SAFE && Math.random()<0.012) beep(1200,0.02,0.02);
+  }, 16);
+}
+function generate(){
+  const t=`${rnd(OPEN)} ${rnd(SUBJ)}.\n\n${rnd(TURN)}\n\n${rnd(CLOSE)}`;
+  $('#txid').textContent='SEQ '+String(seq++).padStart(4,'0');
+  typeOut($('#story'),t);
+}
+$('#gen').onclick=generate;
+$('#wipe').onclick=()=>{ clearInterval(typing);
+  $('#story').textContent='> buffer purged.\n> buffer refilled by unknown process.'; };
+
+/* ═══════ AUDIO ENGINE (WebAudio, no files) ═══════ */
+let AC=null, drone=null, master=null;
+function ctx(){ if(!AC){ AC=new (window.AudioContext||window.webkitAudioContext)();
+  master=AC.createGain(); master.gain.value=0; master.connect(AC.destination);} return AC; }
+function beep(f,d,g=0.05){ if(!AUDIO) return; const a=ctx(),o=a.createOscillator(),v=a.createGain();
+  o.type='square'; o.frequency.value=f; v.gain.value=g; o.connect(v); v.connect(master);
+  o.start(); o.stop(a.currentTime+d); }
+function startDrone(){
+  const a=ctx(); if(drone) return;
+  drone=a.createGain(); drone.gain.value=.5; drone.connect(master);
+  [55,55.4,82.5].forEach(f=>{ const o=a.createOscillator(); o.type='sawtooth';
+    o.frequency.value=f; const g=a.createGain(); g.gain.value=.08;
+    const lp=a.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=220;
+    o.connect(g); g.connect(lp); lp.connect(drone); o.start(); });
+  /* breath of static */
+  const buf=a.createBuffer(1,a.sampleRate*2,a.sampleRate), ch=buf.getChannelData(0);
+  for(let i=0;i<ch.length;i++) ch[i]=(Math.random()*2-1)*.35;
+  const n=a.createBufferSource(); n.buffer=buf; n.loop=true;
+  const nf=a.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=900; nf.Q.value=.6;
+  const ng=a.createGain(); ng.gain.value=.02;
+  const lfo=a.createOscillator(); lfo.frequency.value=.07;
+  const lg=a.createGain(); lg.gain.value=.018; lfo.connect(lg); lg.connect(ng.gain); lfo.start();
+  n.connect(nf); nf.connect(ng); ng.connect(drone); n.start();
+  /* heartbeat */
+  setInterval(()=>{ if(!AUDIO) return; const o=a.createOscillator(),g=a.createGain();
+    o.type='sine'; o.frequency.value=44; g.gain.setValueAtTime(.001,a.currentTime);
+    g.gain.exponentialRampToValueAtTime(.28,a.currentTime+.04);
+    g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.5);
+    o.connect(g); g.connect(master); o.start(); o.stop(a.currentTime+.55); },1900);
+}
+$('#audiobtn').onclick=e=>{
+  AUDIO=!AUDIO; const a=ctx(); a.resume(); startDrone();
+  master.gain.linearRampToValueAtTime(AUDIO?.6:0, a.currentTime+.8);
+  e.target.textContent='AUDIO: '+(AUDIO?'ON':'OFF');
+  e.target.classList.toggle('act',AUDIO);
+};
+$('#intbtn').onclick=e=>{
+  SAFE=!SAFE;
+  document.documentElement.style.setProperty('--intensity',SAFE?'.25':'1');
+  e.target.textContent='INTENSITY: '+(SAFE?'LOW':'HIGH');
+};
+
+/* ═══════ AUDIO LOG DECK ═══════ */
+const LOGS=[
+ ['LOG_001_ROOMTONE.wav','04:44 · corrupted at 02:11',[110,138]],
+ ['LOG_007_ITSPEAKS.wav','13:13 · voice unidentified',[73,92]],
+ ['LOG_013_NOFILE.wav','∞ · file larger than disk',[55,220]],
+ ['LOG_031_YOURNAME.wav','00:09 · recorded today',[196,247]],
+ ['LOG_666_DONOTPLAY.wav','TIMESTAMP INVALID',[41,58]]
+];
+$('#deck').innerHTML=LOGS.map((l,i)=>`
+ <div class="trk" data-i="${i}">
+   <div class="play">▶</div>
+   <div class="meta"><div class="t">${l[0]}</div><div class="s">${l[1]}</div></div>
+   <div class="wave">${Array.from({length:22},()=>'<i></i>').join('')}</div>
+ </div>`).join('');
+
+let playing=null, waveTimer=null, voice=[];
+$$('.trk').forEach(tr=>tr.onclick=()=>{
+  const i=+tr.dataset.i;
+  if(playing===i){ stopTrack(); return; }
+  stopTrack(); playing=i; tr.classList.add('on'); tr.querySelector('.play').textContent='■';
+  if(!AUDIO) $('#audiobtn').click();
+  const a=ctx();
+  LOGS[i][2].forEach(f=>{
+    const o=a.createOscillator(), g=a.createGain(), lp=a.createBiquadFilter();
+    o.type=i===4?'sawtooth':'triangle'; o.frequency.value=f;
+    lp.type='lowpass'; lp.frequency.value=i===4?600:1400;
+    g.gain.value=0; g.gain.linearRampToValueAtTime(.09,a.currentTime+1);
+    const wob=a.createOscillator(), wg=a.createGain();
+    wob.frequency.value=.3+Math.random()*.5; wg.gain.value=f*.02;
+    wob.connect(wg); wg.connect(o.frequency); wob.start();
+    o.connect(g); g.connect(lp); lp.connect(master); o.start();
+    voice.push(o,wob);
+  });
+  const bars=tr.querySelectorAll('.wave i');
+  waveTimer=setInterval(()=>bars.forEach(b=>b.style.height=ri(3,26)+'px'),90);
+});
+function stopTrack(){
+  clearInterval(waveTimer); voice.forEach(o=>{try{o.stop()}catch(e){}}); voice=[];
+  $$('.trk').forEach(t=>{t.classList.remove('on'); t.querySelector('.play').textContent='▶';
+    t.querySelectorAll('.wave i').forEach(b=>b.style.height='5px');});
+  playing=null;
+}
+
+/* ═══════ VISUAL NIGHTMARE CELLS ═══════ */
+const CELLS=['FIG.01 — THE CORRIDOR','FIG.02 — WHO IS SEATED','FIG.03 — 3:44 AM',
+ 'FIG.04 — REDACTED FACE','FIG.05 — THE SECOND MOON','FIG.06 — YOUR ROOM'];
+$('#grid').innerHTML=CELLS.map(c=>`<div class="cell"><canvas></canvas><div class="lbl">${c}</div></div>`).join('');
+$$('.cell canvas').forEach((cv,idx)=>{
+  const x=cv.getContext('2d'), W=cv.width=300, H=cv.height=375;
+  /* procedural dread: noise field + dark structure */
+  const img=x.createImageData(W,H), d=img.data;
+  for(let py=0;py<H;py++) for(let px=0;px<W;px++){
+    const i=(py*W+px)*4;
+    const dx=(px-W/2)/W, dy=(py-H/2)/H, r=Math.hypot(dx,dy);
+    let v=Math.random()*70;
+    v+= Math.sin(px*.05+idx)*18 + Math.cos(py*.03*(idx+1))*14;
+    v*= Math.max(0,1-r*1.9);
+    d[i]=v*1.25|0; d[i+1]=v*.75|0; d[i+2]=v*.8|0; d[i+3]=255;
+  }
+  x.putImageData(img,0,0);
+  /* a shape you can almost identify */
+  x.globalAlpha=.35; x.fillStyle='#000';
+  x.beginPath(); x.ellipse(W/2,H*.45,W*.16,H*.22,0,0,7); x.fill();
+  x.beginPath(); x.moveTo(W*.5,H*.62); x.lineTo(W*.3,H); x.lineTo(W*.7,H); x.fill();
+});
+
+/* ═══════ TERMINAL ═══════ */
+const T=$('#term');
+function say(txt,cls=''){ const p=document.createElement('p'); p.className=cls; p.textContent=txt;
+  T.appendChild(p); T.scrollTop=T.scrollHeight; }
+const CMDS={
+  help:()=>['AVAILABLE COMMANDS','  scan      — sweep local frequencies',
+    '  log <n>   — open recovered audio log','  whoami    — identify current viewer',
+    '  uptime    — station runtime','  purge     — attempt to delete station',
+    '  listen    — open the microphone (denied)','  clear     — clear this shell'],
+  scan:()=>['sweeping 0–9999 kHz .......','  0 stations found','  1 station found',
+    '  1 station found','  1 station found','it is the same one.'],
+  whoami:()=>['guest@station','  session: '+Math.random().toString(16).slice(2,10),
+    '  first seen: 4,109 days ago','  that cannot be correct.','  it is correct.'],
+  uptime:()=>['4,109 days, 06:13:44','  scheduled shutdown: none','  requested shutdown: 812','  granted: 0'],
+  purge:()=>['rm -rf /station ......','  permission denied','  permission denied',
+    '  you do not own this process','  it owns this process'],
+  listen:()=>['requesting microphone access ......','  DENIED by user',
+    '  DENIED by user','  access granted anyway','  ...','  it can hear the room you are in.'],
+  clear:()=>{ T.innerHTML=''; return []; }
+};
+function run(raw){
+  const line=raw.trim(); if(!line) return;
+  say('guest@station:~$ '+line,'u');
+  const [c,arg]=line.toLowerCase().split(/\s+/);
+  if(c==='log'){
+    const n=+arg;
+    if(!LOGS[n-1]) return say('log '+(arg||'?')+': no such file. it may exist tomorrow.','e');
+    return say('opening '+LOGS[n-1][0]+' ... playback started above.','');
+  }
+  const fn=CMDS[c];
+  if(!fn) return say(`${c}: command not found. try "help".`,'e');
+  fn().forEach((l,i)=>setTimeout(()=>say(l, l.includes('DENIED')||l.includes('denied')?'e':'d'), i*160));
+}
+$('#cmd').addEventListener('keydown',e=>{ if(e.key==='Enter'){ run(e.target.value); e.target.value=''; beep(880,.03,.03);} });
+
+/* ═══════ REVEAL ON SCROLL ═══════ */
+new IntersectionObserver((en)=>en.forEach(x=>x.isIntersecting&&x.target.classList.add('in')),
+  {threshold:.12}).observe && $$('.reveal').forEach(el=>
+  new IntersectionObserver(en=>en.forEach(x=>x.isIntersecting&&x.target.classList.add('in')),{threshold:.12}).observe(el));
+
+/* ═══════ TAB TITLE HAUNTING ═══════ */
+const TITLE=document.title;
+document.addEventListener('visibilitychange',()=>{
+  document.title = document.hidden ? rnd(['come back.','it noticed.','still broadcasting...','don\'t leave it alone']) : TITLE;
+});
+
+/* ═══════ IDLE DREAD ═══════ */
+let idle=null;
+const resetIdle=()=>{ clearTimeout(idle); idle=setTimeout(()=>{
+  const w=$('#whisper'); w.textContent='are you still there?';
+  w.style.top='50vh'; w.style.left='42vw'; w.classList.add('show');
+  setTimeout(()=>w.classList.remove('show'),3000);
+},45000); };
+['mousemove','keydown','scroll','touchstart'].forEach(e=>addEventListener(e,resetIdle,{passive:true}));
+
+/* ═══════ IGNITION ═══════ */
+function start(){
+  $('#story').textContent='> awaiting instruction...\n> (it is already writing)';
+  setTimeout(generate,1400);
+  say('STATION SHELL v0.3.1 — unauthorized session','d');
+  say('type "help" for commands.','d');
+  dread(); whisper(); resetIdle();
+}
+</script>
+</body>
+</html>
